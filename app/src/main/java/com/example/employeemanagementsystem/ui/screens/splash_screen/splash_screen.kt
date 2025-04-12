@@ -14,18 +14,15 @@ import com.example.employeemanagementsystem.utils.dummyEmployeeList
 import kotlinx.coroutines.delay
 
 @Composable
-fun SplashScreen(onNavigateToHome: (List<Employee>) -> Unit){
+fun SplashScreen(navController: NavHostController){
     LaunchedEffect(Unit) {
         delay(100)
-        onNavigateToHome(dummyEmployeeList)
-//        navController.navigate("home"){
-//            popUpTo("splash"){inclusive = true}
-//        }
+        navController.navigate("login"){
+            popUpTo("splash"){inclusive = true}
+        }
     }
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(color = Color.Yellow),
+        modifier = Modifier.fillMaxSize().background(color = Color.Yellow),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
