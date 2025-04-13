@@ -21,6 +21,7 @@ import com.example.employeemanagementsystem.data.RetrofitInstance
 import com.example.employeemanagementsystem.data.local.LocalDb
 import com.example.employeemanagementsystem.data.model.Employee
 import com.example.employeemanagementsystem.ui.screens.components.*
+import com.example.employeemanagementsystem.utils.dummyDepartmentList
 import com.example.employeemanagementsystem.viewmodel.*
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
@@ -36,7 +37,7 @@ fun HomeScreen(
     employeeViewModel: EmployeeViewModel = viewModel(factory = EmployeeViewModelFactory(RetrofitInstance.api))
 ) {
     var searchState by remember { mutableStateOf("") }
-    val chipOptions = List(15) { "Chip ${it + 1}" }
+    val chipOptions = dummyDepartmentList
     var selectedIndex by remember { mutableIntStateOf(-1) }
 
     val context = LocalContext.current
@@ -47,7 +48,7 @@ fun HomeScreen(
 
     var isLogOuting = false
     var isDeleting = false
-    var deleteId: Int = -1
+
     var employeeList: List<Employee> = emptyList()
 
     val isRefreshing = employeeResult is EmployeeResult.Loading
@@ -89,9 +90,7 @@ fun HomeScreen(
         content = {
             innerPadding ->  SwipeRefresh(
             state = rememberSwipeRefreshState(isRefreshing = isRefreshing),
-            onRefresh = {
-                employeeViewModel.fetchEmployees()
-            }
+            onRefresh = { employeeViewModel.fetchEmployees() }
         ) {
             Column(modifier = Modifier
                 .padding(innerPadding)
@@ -113,6 +112,7 @@ fun HomeScreen(
                     onChange = { searchState = it }
                 )
 
+
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Row(
@@ -120,45 +120,17 @@ fun HomeScreen(
                         .horizontalScroll(rememberScrollState())
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
-                    chipOptions.forEachIndexed { index, label ->
+                    chipOptions.forEachIndexed { index, dep ->
                         CustomFilterChip(
-                            onClick = {selectedIndex = index},
+                            onClick = { selectedIndex = index },
                             index = index,
                             selectedIndex = selectedIndex,
-                            label = label,
+                            label = dep.department,
                         )
                     }
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
-
-                when (deleteEmployeeResult) {
-                    is EmployeeResult.Loading -> {isDeleting = true}
-
-                    is EmployeeResult.Success -> {
-                        val message = (deleteEmployeeResult as EmployeeResult.Success).message
-                        LaunchedEffect(message) {
-                            employeeList = employeeList.filter { it.id != deleteId }
-                            scope.launch { snackbarHostState.showSnackbar(message) }
-                            employeeViewModel.resetDeleteEmployeeResult()
-                            employeeViewModel.fetchEmployees()
-                            isDeleting = false
-
-                        }
-                    }
-
-                    is EmployeeResult.Error -> {
-                        val message = (deleteEmployeeResult as EmployeeResult.Error).message
-
-                        LaunchedEffect(Unit) {
-                            scope.launch { snackbarHostState.showSnackbar(message) }
-                            employeeViewModel.resetDeleteEmployeeResult()
-                            isDeleting = false
-                        }
-                    }
-
-                    is EmployeeResult.Empty -> {isDeleting = false}
-                }
 
                 when (employeeResult) {
                     is EmployeeResult.Loading -> {
@@ -166,7 +138,7 @@ fun HomeScreen(
                             modifier = Modifier.fillMaxSize(),
                             verticalArrangement = Arrangement.Center,
                             horizontalAlignment = Alignment.CenterHorizontally,
-                        ){
+                        ) {
                             CircularProgressIndicator(
                                 modifier = Modifier.width(50.dp),
                                 color = MaterialTheme.colorScheme.secondary,
@@ -176,37 +148,7 @@ fun HomeScreen(
                     }
 
                     is EmployeeResult.Success -> {
-                        employeeList = (employeeResult as EmployeeResult.Success).data as List<Employee>
-
-                        if (employeeList.isEmpty()) {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(text = "Empty")
-                            }
-                        } else {
-                            LazyColumn {
-                                items(employeeList.reversed()) { employee ->
-                                    CustomCard(
-                                        employee,
-                                        onClickEdit = {
-                                            navController.navigate("add_edit?employeeId=${employee.id}")
-                                        },
-                                        onClickDelete = {
-                                            isDeleting = true
-                                            deleteId = employee.id!!
-                                            employeeViewModel.deleteEmployeeById(deleteId)
-                                        }
-                                    )
-                                }
-                            }
-                        }
-
-
-
-
-
+                        employeeList = ((employeeResult as EmployeeResult.Success).data as List<Employee>)
                     }
 
                     is EmployeeResult.Error -> {
@@ -233,6 +175,61 @@ fun HomeScreen(
                         }
                     }
                 }
+
+                if (employeeList.isEmpty()) {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(text = "Empty")
+                    }
+                } else {
+                    LazyColumn {
+                        items(employeeList.reversed()) { employee ->
+                            CustomCard(
+                                employee,
+                                onClickEdit = {
+                                    navController.navigate("add_edit?employeeId=${employee.id}")
+                                },
+                                onClickDelete = {
+                                    isDeleting = true
+                                    employeeViewModel.deleteEmployeeById(employee.id!!)
+                                }
+                            )
+                        }
+                    }
+                }
+
+
+                when (deleteEmployeeResult) {
+                    is EmployeeResult.Loading -> {isDeleting = true}
+
+                    is EmployeeResult.Success -> {
+                        val message = (deleteEmployeeResult as EmployeeResult.Success).message
+                        LaunchedEffect(message) {
+                            scope.launch { snackbarHostState.showSnackbar(message) }
+
+                            employeeViewModel.resetDeleteEmployeeResult()
+
+                            employeeViewModel.fetchEmployees()
+                            isDeleting = false
+                        }
+                    }
+
+                    is EmployeeResult.Error -> {
+                        val message = (deleteEmployeeResult as EmployeeResult.Error).message
+
+                        LaunchedEffect(Unit) {
+                            scope.launch { snackbarHostState.showSnackbar(message) }
+                            employeeViewModel.resetDeleteEmployeeResult()
+                            isDeleting = false
+                        }
+                    }
+
+                    is EmployeeResult.Empty -> {isDeleting = false}
+                }
+
 
             }
         }
@@ -273,6 +270,7 @@ fun HomeScreen(
         }
     }
 }
+
 
 @Composable
 fun CustomMenu(viewModel: AuthViewModel, context: Context, username: String?) {

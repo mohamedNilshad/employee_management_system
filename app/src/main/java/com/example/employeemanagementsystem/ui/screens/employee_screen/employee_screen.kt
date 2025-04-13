@@ -42,6 +42,9 @@ fun EmployeeScreen(
 
     val employeeResult by employeeViewModel.employeeResult.collectAsState()
     val getEmployeeResult by employeeViewModel.getEmployeeResult.collectAsState()
+    val deleteEmployeeResult by employeeViewModel.deleteEmployeeResult.collectAsState()
+
+    var isDeleting = false
     var isLoading = false
     var isEnable = false
 
@@ -54,7 +57,7 @@ fun EmployeeScreen(
 
     if(employeeId != -1) {
         LaunchedEffect(Unit) {
-            employeeViewModel.deleteEmployeeById(employeeId!!)
+            employeeViewModel.fetchEmployeeById(employeeId!!)
         }
     }
 
@@ -98,7 +101,7 @@ fun EmployeeScreen(
             .padding(8.dp)
             .fillMaxSize()) {
 
-            if(isGettingEmployee){
+            if(isGettingEmployee || isDeleting){
                 LinearProgressIndicator(
                     modifier = Modifier.fillMaxWidth(),
                     color = MaterialTheme.colorScheme.secondary,
@@ -109,6 +112,7 @@ fun EmployeeScreen(
             CustomTextField("Name", nameState, onChange = {
                 nameState = it
                 isEnable = (emailState != "") && (nameState != "")
+
             })
             Spacer(Modifier.height(8.dp))
 
@@ -159,6 +163,7 @@ fun EmployeeScreen(
             }
 
             Spacer(modifier = Modifier.height(8.dp))
+
             when (employeeResult) {
                 is EmployeeResult.Loading -> { isLoading = true }
 
@@ -186,7 +191,7 @@ fun EmployeeScreen(
                         employeeViewModel.resetEmployeeResult()
                     }
                     isLoading = false
-                    isEnable = true
+                    isEnable = false
                     if (employeeId != -1) navController.popBackStack()
                 }
 
@@ -226,7 +231,7 @@ fun EmployeeScreen(
                                 inPageEmployeeId = employee.id!!
                             },
                             onClickDelete = {
-//                                navController.navigate("add_edit")
+                                employeeViewModel.deleteEmployeeById(employee.id!!)
                             }
                         )
                     }
@@ -260,6 +265,32 @@ fun EmployeeScreen(
         }
 
         is EmployeeResult.Empty -> { isGettingEmployee = false }
+    }
+
+    when (deleteEmployeeResult) {
+        is EmployeeResult.Loading -> {isDeleting = true}
+
+        is EmployeeResult.Success -> {
+            val message = (deleteEmployeeResult as EmployeeResult.Success).message
+            LaunchedEffect(message) {
+                scope.launch { snackbarHostState.showSnackbar(message) }
+                employeeViewModel.resetDeleteEmployeeResult()
+                isDeleting = false
+                navController.popBackStack()
+            }
+        }
+
+        is EmployeeResult.Error -> {
+            val message = (deleteEmployeeResult as EmployeeResult.Error).message
+
+            LaunchedEffect(Unit) {
+                scope.launch { snackbarHostState.showSnackbar(message) }
+                employeeViewModel.resetDeleteEmployeeResult()
+                isDeleting = false
+            }
+        }
+
+        is EmployeeResult.Empty -> {isDeleting = false}
     }
 }
 

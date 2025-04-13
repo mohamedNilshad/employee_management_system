@@ -54,6 +54,23 @@ class EmployeeViewModel(private val repository: EmployeeRepository) : ViewModel(
         }
     }
 
+    fun fetchEmployeeById(employeeId: Int) {
+
+        viewModelScope.launch {
+            _getEmployeeResult.value = EmployeeResult.Loading
+            try {
+                val employee = repository.getEmployee(employeeId)
+                if (employee != null) {
+                    _getEmployeeResult.value = EmployeeResult.Success(status = true, message = "success", data = employee)
+                } else {
+                    _getEmployeeResult.value = EmployeeResult.Error("Empty")
+                }
+            } catch (e: Exception) {
+                _getEmployeeResult.value = EmployeeResult.Error(e.message ?: "Unknown error")
+            }
+        }
+    }
+
     fun addEmployee(employee: Employee) {
 
         viewModelScope.launch {
