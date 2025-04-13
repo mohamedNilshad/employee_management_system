@@ -16,6 +16,7 @@ Steps to Run
   4. In Android Studio, go to File > Sync Project with Gradle Files to ensure all dependencies are downloaded.
   5. Build the project
   6. Run the app on an emulator or a physical device by clicking the Run button in Android Studio.
+  7. You can download the APK file from "APK FILE HEAR" Folder in this project
 
 API Endpoints
 The application uses the following API endpoints to interact with employee data and users data:
