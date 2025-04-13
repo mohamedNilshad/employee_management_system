@@ -8,6 +8,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -17,19 +18,19 @@ import com.example.employeemanagementsystem.ui.screens.components.*
 import com.example.employeemanagementsystem.utils.rememberImeState
 import com.example.employeemanagementsystem.viewmodel.*
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun LoginScreen(
     navController: NavHostController,
-    viewModel: AuthViewModel = viewModel(factory = LoginViewModelFactory(RetrofitInstance.api))
+    viewModel: AuthViewModel = viewModel(factory = AuthViewModelFactory(RetrofitInstance.api))
 ) {
     var emailState by remember { mutableStateOf("") }
     var passState by remember { mutableStateOf("") }
     val imeState = rememberImeState()
     val scrollState = rememberScrollState()
+    val context = LocalContext.current
 
     val loginResult by viewModel.loginResult.collectAsState()
     var isLoading = false
@@ -91,8 +92,7 @@ fun LoginScreen(
             Button(
                 onClick = {
                     if(emailState != "" && passState != "null"){
-                        viewModel.login(emailState, passState)
-
+                        viewModel.login(context, emailState, passState)
                     }
                 },
                 modifier = Modifier.fillMaxWidth().height(50.dp),

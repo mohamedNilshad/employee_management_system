@@ -52,7 +52,7 @@ android {
 
 dependencies {
 
-
+    implementation(libs.accompanist.swiperefresh)
     implementation(libs.retrofit)
     implementation(libs.converter.gson)
     implementation(libs.androidx.core.ktx)

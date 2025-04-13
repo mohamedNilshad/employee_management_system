@@ -1,6 +1,7 @@
 package com.example.employeemanagementsystem.ui.screens.home_screen
 
 import android.annotation.SuppressLint
+import android.content.Context
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
@@ -11,23 +12,45 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.*
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import com.example.employeemanagementsystem.data.RetrofitInstance
+import com.example.employeemanagementsystem.data.local.LocalDb
 import com.example.employeemanagementsystem.data.model.Employee
 import com.example.employeemanagementsystem.ui.screens.components.*
-import com.example.employeemanagementsystem.utils.dummyEmployeeList
+import com.example.employeemanagementsystem.viewmodel.*
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     navController: NavHostController,
-
+    authViewModel: AuthViewModel = viewModel(factory = AuthViewModelFactory(RetrofitInstance.api)),
+    employeeViewModel: EmployeeViewModel = viewModel(factory = EmployeeViewModelFactory(RetrofitInstance.api))
 ) {
     var searchState by remember { mutableStateOf("") }
     val chipOptions = List(15) { "Chip ${it + 1}" }
     var selectedIndex by remember { mutableIntStateOf(-1) }
-    val employeeList: List<Employee> = dummyEmployeeList
+
+    val context = LocalContext.current
+    val logoutResult by authViewModel.logoutResult.collectAsState()
+    val employeeResult by employeeViewModel.employeeResult.collectAsState()
+    var isLogOuting = false
+
+    val isRefreshing = employeeResult is EmployeeResult.Loading
+
+    val prefHelper = remember { LocalDb(context) }
+
+    LaunchedEffect(Unit) {
+        employeeViewModel.fetchEmployees()
+    }
+
+
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -38,7 +61,7 @@ fun HomeScreen(
                     scrolledContainerColor = Color.Transparent,
                     navigationIconContentColor = Color.Transparent
                 ),
-                actions = { CustomMenu() },
+                actions = { CustomMenu(authViewModel, context, prefHelper.getUsername()) },
                 title = {
                     Text("Employee Manager")
                 },
@@ -46,41 +69,110 @@ fun HomeScreen(
             )
         },
         content = {
-            innerPadding ->  Column(modifier = Modifier
-            .padding(innerPadding)
-            .padding(8.dp)
-            .fillMaxSize()) {
+            innerPadding ->  SwipeRefresh(
+            state = rememberSwipeRefreshState(isRefreshing = isRefreshing),
+            onRefresh = {
+                employeeViewModel.fetchEmployees()
+            }
+        ) {
+            Column(modifier = Modifier
+                .padding(innerPadding)
+                .padding(8.dp)
+                .fillMaxSize()) {
 
-            CustomTextField(
-                "Search",
-                searchState,
-                onChange = { searchState = it }
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Row(
-                modifier = Modifier
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
-            ) {
-                chipOptions.forEachIndexed { index, label ->
-                    CustomFilterChip(
-                        onClick = {selectedIndex = index},
-                        index = index,
-                        selectedIndex = selectedIndex,
-                        label = label,
+                if(isLogOuting){
+                    LinearProgressIndicator(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.secondary,
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
                     )
                 }
-            }
 
-            Spacer(modifier = Modifier.height(8.dp))
-            LazyColumn {
-                items(employeeList) { employee ->
-                    CustomCard(employee)
+
+                CustomTextField(
+                    "Search",
+                    searchState,
+                    onChange = { searchState = it }
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Row(
+                    modifier = Modifier
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    chipOptions.forEachIndexed { index, label ->
+                        CustomFilterChip(
+                            onClick = {selectedIndex = index},
+                            index = index,
+                            selectedIndex = selectedIndex,
+                            label = label,
+                        )
+                    }
                 }
-            }
 
+                Spacer(modifier = Modifier.height(8.dp))
+
+                when (employeeResult) {
+                    is EmployeeResult.Loading -> {
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ){
+                            CircularProgressIndicator(
+                                modifier = Modifier.width(50.dp),
+                                color = MaterialTheme.colorScheme.secondary,
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                            )
+                        }
+                    }
+
+                    is EmployeeResult.Success -> {
+                        val employeeList = (employeeResult as EmployeeResult.Success).data as List<Employee>
+                        if (employeeList.isEmpty()) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(text = "Empty")
+                            }
+                        } else {
+                            LazyColumn {
+                                items(employeeList.reversed()) { employee ->
+                                    CustomCard(employee)
+                                }
+                            }
+                        }
+                    }
+
+                    is EmployeeResult.Error -> {
+                        val message = (employeeResult as EmployeeResult.Error).message
+
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(text = message, color = Color.Red)
+                        }
+
+                        LaunchedEffect(Unit) {
+                            employeeViewModel.resetEmployeeResult()
+                        }
+                    }
+
+                    is EmployeeResult.Empty -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(text = "No employees found.")
+                        }
+                    }
+                }
+
+            }
         }
 
         },
@@ -91,4 +183,67 @@ fun HomeScreen(
             )
         },
     )
+
+    when (logoutResult) {
+
+        is AuthResult.Loading -> { isLogOuting = true}
+
+        is AuthResult.Success -> {
+            isLogOuting = false
+            val user = (logoutResult as AuthResult.Success).data
+            LaunchedEffect(user) {
+                navController.navigate("login"){ popUpTo(0) }
+            }
+        }
+
+        is AuthResult.Error -> {
+            isLogOuting = false
+            val message = (logoutResult as AuthResult.Error).message
+            LaunchedEffect(message) {
+                authViewModel.resetLogoutResult()
+            }
+        }
+
+        is AuthResult.Empty -> {
+            isLogOuting = false
+        }
+    }
+}
+
+@Composable
+fun CustomMenu(viewModel: AuthViewModel, context: Context, username: String?) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box(
+        modifier = Modifier
+            .padding(16.dp)
+    ) {
+        IconButton(onClick = { expanded = !expanded }) {
+            Icon(Icons.Default.MoreVert, contentDescription = "More options")
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+
+            DropdownMenuItem(
+                text = { Text(username!!) },
+                leadingIcon = {Icon(Icons.Filled.AccountCircle, contentDescription = "Name")},
+                onClick = {}
+            )
+            DropdownMenuItem(
+                text = { Text("Dark Mode") },
+                leadingIcon = {Icon(Icons.Filled.Info, contentDescription = "Theme")},
+                onClick = { /* Do something... */ }
+            )
+            DropdownMenuItem(
+                text = { Text("Logout") },
+                leadingIcon = {Icon(Icons.Filled.Close, contentDescription = "Logout")},
+                onClick = {
+                    viewModel.logout(context)
+                }
+            )
+        }
+
+    }
 }

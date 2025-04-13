@@ -2,9 +2,8 @@ package com.example.employeemanagementsystem.ui.screens.auth_screen
 
 import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
@@ -17,16 +16,14 @@ import com.example.employeemanagementsystem.data.RetrofitInstance
 import com.example.employeemanagementsystem.data.model.User
 import com.example.employeemanagementsystem.ui.screens.components.*
 import com.example.employeemanagementsystem.utils.rememberImeState
-import com.example.employeemanagementsystem.viewmodel.AuthResult
-import com.example.employeemanagementsystem.viewmodel.AuthViewModel
-import com.example.employeemanagementsystem.viewmodel.LoginViewModelFactory
+import com.example.employeemanagementsystem.viewmodel.*
 import kotlinx.coroutines.launch
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun RegisterScreen(
     navController: NavHostController,
-    viewModel: AuthViewModel = viewModel(factory = LoginViewModelFactory(RetrofitInstance.api))
+    viewModel: AuthViewModel = viewModel(factory = AuthViewModelFactory(RetrofitInstance.api))
 ) {
     var nameState by remember { mutableStateOf("") }
     var emailState by remember { mutableStateOf("") }
@@ -91,7 +88,9 @@ fun RegisterScreen(
                 emailState = it
                 isEnable = (emailState != "") && (nameState != "") && (passState != "")
             })
+
             Spacer(Modifier.height(8.dp))
+
             CustomTextField("Password", passState, onChange = {
                 passState = it
                 isEnable = (emailState != "") && (nameState != "") && (passState != "")
@@ -100,9 +99,8 @@ fun RegisterScreen(
 
             Button(
                 onClick = {
-//
                     if(emailState != "" && nameState != "null" && passState != "null"){
-                        viewModel.register(User(name = nameState, email = emailState, password = passState))
+                        viewModel.register (User(name = nameState, email = emailState, password = passState))
                     }
                 },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
@@ -138,7 +136,7 @@ fun RegisterScreen(
             val isRegistered = (registerResult as AuthResult.Success).status
 
             LaunchedEffect(isRegistered) {
-//                if(isRegistered) navController.navigate("home"){ popUpTo(0) }
+                if(isRegistered) navController.navigate("login"){ popUpTo(0) }
             }
         }
 

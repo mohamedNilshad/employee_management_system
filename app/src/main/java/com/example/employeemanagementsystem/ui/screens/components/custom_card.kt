@@ -29,6 +29,10 @@ fun CustomCard(employee: Employee){
                     "Department: ${employee.department}",
                     fontSize = 18.sp
                 )
+                Text(
+                    "Email: ${employee.email}",
+                    fontSize = 18.sp
+                )
             }
 
             Row {

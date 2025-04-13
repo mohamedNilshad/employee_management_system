@@ -9,17 +9,29 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.example.employeemanagementsystem.data.model.Employee
-import com.example.employeemanagementsystem.utils.dummyEmployeeList
+import com.example.employeemanagementsystem.data.local.LocalDb
+import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.delay
 
 @Composable
 fun SplashScreen(navController: NavHostController){
+    val context = LocalContext.current
+    val prefHelper = remember { LocalDb(context) }
+
     LaunchedEffect(Unit) {
+        val isLoggedIn = prefHelper.isLoggedIn()
+
         delay(100)
-        navController.navigate("login"){
-            popUpTo("splash"){inclusive = true}
+        if(isLoggedIn){
+            navController.navigate("home"){
+                popUpTo("splash"){inclusive = true}
+            }
+        }else{
+            navController.navigate("login"){
+                popUpTo("splash"){inclusive = true}
+            }
         }
+
     }
     Column(
         modifier = Modifier.fillMaxSize().background(color = Color.Yellow),

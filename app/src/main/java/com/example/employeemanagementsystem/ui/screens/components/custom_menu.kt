@@ -10,7 +10,7 @@ import androidx.compose.ui.unit.dp
 
 
 @Composable
-fun CustomMenu() {
+fun CustomMenu1() {
     var expanded by remember { mutableStateOf(false) }
     Box(
         modifier = Modifier
@@ -37,7 +37,7 @@ fun CustomMenu() {
             DropdownMenuItem(
                 text = { Text("Logout") },
                 leadingIcon = {Icon(Icons.Filled.Close, contentDescription = "Logout")},
-                onClick = { /* Do something... */ }
+                onClick = { }
             )
         }
     }
