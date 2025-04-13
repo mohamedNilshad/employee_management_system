@@ -141,7 +141,15 @@ fun HomeScreen(
                         } else {
                             LazyColumn {
                                 items(employeeList.reversed()) { employee ->
-                                    CustomCard(employee)
+                                    CustomCard(
+                                        employee,
+                                        onClickEdit = {
+                                            navController.navigate("add_edit?employeeId=${employee.id}")
+                                        },
+                                        onClickDelete = {
+//                                            navController.navigate("add_edit")
+                                        }
+                                    )
                                 }
                             }
                         }
@@ -178,7 +186,9 @@ fun HomeScreen(
         },
         floatingActionButton = {
             CustomFloatingButton(
-                onClick = { navController.navigate("add_edit") },
+                onClick = {
+                    navController.navigate("add_edit")
+                },
                 icon = Icons.Filled.Add
             )
         },

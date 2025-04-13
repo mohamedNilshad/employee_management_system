@@ -10,6 +10,9 @@ interface ApiService {
     @GET("employees")
     suspend fun getEmployees(): List<Employee>
 
+    @GET("employees/{id}")
+    suspend fun getEmployee(@Path("id") id: String): Employee
+
     @POST("employees")
     suspend fun addEmployee(@Body employee: Employee): Employee
 

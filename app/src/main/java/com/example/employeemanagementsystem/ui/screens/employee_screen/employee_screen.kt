@@ -1,4 +1,4 @@
-package com.example.employeemanagementsystem.ui.screens.employee_form_screen
+package com.example.employeemanagementsystem.ui.screens.employee_screen
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -25,27 +25,38 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EmployeeScreen(
-    employee: Employee? = null,
+    employeeId: Int? = null,
     navController: NavHostController,
     employeeViewModel: EmployeeViewModel = viewModel(factory = EmployeeViewModelFactory(RetrofitInstance.api))
 ) {
-    var nameState by remember { mutableStateOf(employee?.name ?: "") }
-    var emailState by remember { mutableStateOf(employee?.email ?: "") }
+    var nameState by remember { mutableStateOf( "") }
+    var emailState by remember { mutableStateOf("") }
     val options: List<Department> = dummyDepartmentList
 
     var selected by remember { mutableStateOf(options.first().department) }
 
-    val title: String = if (employee == null) "Add New Employee" else "Update Employee"
+    val title: String = if (employeeId == -1) "Add New Employee" else "Update Employee"
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
     val tempEmployeeList = mutableListOf<Employee>()
-    var tempEmployee: Employee = Employee.empty()
+    var tempEmployee: Employee
 
     val employeeResult by employeeViewModel.employeeResult.collectAsState()
+    val getEmployeeResult by employeeViewModel.getEmployeeResult.collectAsState()
     var isLoading = false
     var isEnable = false
 
+    var isGettingEmployee = false
+    var inPageEmployeeId = -1
+
+
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    if(employeeId != -1) {
+        LaunchedEffect(Unit) {
+            employeeViewModel.fetchEmployeeById(employeeId!!)
+        }
+    }
 
     Scaffold(
         snackbarHost = {
@@ -71,7 +82,9 @@ fun EmployeeScreen(
 
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(
+                        onClick = { navController.popBackStack() }
+                    ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Localized description"
@@ -84,6 +97,14 @@ fun EmployeeScreen(
             .padding(innerPadding)
             .padding(8.dp)
             .fillMaxSize()) {
+
+            if(isGettingEmployee){
+                LinearProgressIndicator(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.secondary,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                )
+            }
 
             CustomTextField("Name", nameState, onChange = {
                 nameState = it
@@ -107,12 +128,22 @@ fun EmployeeScreen(
 
             Button(
                 onClick = {
-                    tempEmployee = Employee(name = nameState, email = emailState, department = selected)
-                    employeeViewModel.addEmployee (tempEmployee)
+                    if(employeeId == -1){
+                        if(inPageEmployeeId != -1) {
+                            employeeViewModel.updateEmployee(Employee(id = inPageEmployeeId, name = nameState, email = emailState, department = selected))
+                        }else{
+                            tempEmployee = Employee(name = nameState, email = emailState, department = selected)
+                            employeeViewModel.addEmployee(tempEmployee)
+                        }
+
+                    }else{
+                        employeeViewModel.updateEmployee(Employee(id = employeeId, name = nameState, email = emailState, department = selected))
+                    }
+
                 },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(8.dp),
-                enabled = !isLoading && isEnable
+                enabled = (employeeId != -1) ||(!isLoading && isEnable)
             ) {
 
                 if (isLoading) {
@@ -122,7 +153,7 @@ fun EmployeeScreen(
                         color = Color.Blue
                     )
                 } else {
-                    Text(if (employee == null) "Add" else "Update")
+                    Text(if (employeeId == -1 && inPageEmployeeId == -1) "Add" else "Update")
                 }
 
             }
@@ -133,9 +164,22 @@ fun EmployeeScreen(
 
                 is EmployeeResult.Success -> {
                     val isAdded = (employeeResult as EmployeeResult.Success).status
+                    val updatedEmployee = (employeeResult as EmployeeResult.Success).data as Employee
                     val message = (employeeResult as EmployeeResult.Success).message
-                    if (isAdded) {
-                        tempEmployeeList.add(tempEmployee)
+
+                    if (isAdded && (employeeId == -1)) {
+                        if(inPageEmployeeId != -1){
+                            val index = tempEmployeeList.indexOfFirst { it.id == updatedEmployee.id }
+                            if (index != -1) {
+                                tempEmployeeList[index] = updatedEmployee
+                            }
+                            println(tempEmployeeList)
+                        }else {
+                            tempEmployeeList.add(updatedEmployee)
+                        }
+                        nameState = ""
+                        emailState = ""
+                        selected = dummyDepartmentList.first().department
                     }
                     LaunchedEffect(message) {
                         scope.launch { snackbarHostState.showSnackbar(message) }
@@ -143,6 +187,7 @@ fun EmployeeScreen(
                     }
                     isLoading = false
                     isEnable = true
+                    if (employeeId != -1) navController.popBackStack()
                 }
 
                 is EmployeeResult.Error -> {
@@ -172,7 +217,18 @@ fun EmployeeScreen(
             }else {
                 LazyColumn {
                     items(tempEmployeeList.reversed()) { employee ->
-                        CustomCard(employee)
+                        CustomCard(
+                            employee=employee,
+                            onClickEdit = {
+                                nameState = employee.name
+                                emailState = employee.email
+                                selected = employee.department
+                                inPageEmployeeId = employee.id!!
+                            },
+                            onClickDelete = {
+//                                navController.navigate("add_edit")
+                            }
+                        )
                     }
                 }
             }
@@ -181,6 +237,30 @@ fun EmployeeScreen(
 
         },
     )
+    when (getEmployeeResult) {
+        is EmployeeResult.Loading -> { isGettingEmployee = true }
+
+        is EmployeeResult.Success -> {
+            val employee = (getEmployeeResult as EmployeeResult.Success).data as Employee
+
+            nameState = employee.name
+            emailState = employee.email
+            selected = employee.department
+            isGettingEmployee = false
+        }
+
+        is EmployeeResult.Error -> {
+
+            val message = (getEmployeeResult as EmployeeResult.Error).message
+            LaunchedEffect(message) {
+                scope.launch { snackbarHostState.showSnackbar(message) }
+                employeeViewModel.resetEmployeeResult()
+                isGettingEmployee = false
+            }
+        }
+
+        is EmployeeResult.Empty -> { isGettingEmployee = false }
+    }
 }
 
 

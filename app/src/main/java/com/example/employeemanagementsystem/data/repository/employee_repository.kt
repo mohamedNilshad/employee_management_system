@@ -6,7 +6,9 @@ import com.example.employeemanagementsystem.data.remote.ApiService
 
 interface EmployeeRepository {
     suspend fun fetchEmployee(): List<Employee>?
-    suspend fun addEmployee(employee: Employee): Boolean
+    suspend fun getEmployee(employeeId: Int): Employee?
+    suspend fun addEmployee(employee: Employee): Employee?
+    suspend fun updateEmployee(employee: Employee): Employee
 }
 
 class EmployeeRepositoryImpl(private val apiService: ApiService) : EmployeeRepository {
@@ -15,9 +17,19 @@ class EmployeeRepositoryImpl(private val apiService: ApiService) : EmployeeRepos
         return employeeList
     }
 
-    override suspend fun addEmployee(employee: Employee): Boolean {
+    override suspend fun getEmployee(employeeId: Int): Employee {
+        val employee = apiService.getEmployee(employeeId.toString())
+        return employee
+    }
+
+    override suspend fun addEmployee(employee: Employee): Employee {
         val employeeResult = apiService.addEmployee(employee)
-        return employeeResult != null
+        return employeeResult
+    }
+
+    override suspend fun updateEmployee(employee: Employee): Employee {
+        val employeeResult = apiService.updateEmployee(employee.id.toString(), employee)
+        return employeeResult
     }
 
 }

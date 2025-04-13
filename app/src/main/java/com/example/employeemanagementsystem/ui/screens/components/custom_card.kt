@@ -11,7 +11,11 @@ import androidx.compose.ui.unit.*
 import com.example.employeemanagementsystem.data.model.Employee
 
 @Composable
-fun CustomCard(employee: Employee){
+fun CustomCard(
+    employee: Employee,
+    onClickEdit: () -> Unit,
+    onClickDelete: () -> Unit
+){
     Card(modifier = Modifier.fillMaxWidth().padding(4.dp)) {
 
         Row(
@@ -34,13 +38,12 @@ fun CustomCard(employee: Employee){
                     fontSize = 18.sp
                 )
             }
-
             Row {
-                IconButton(onClick = { }) {
+                IconButton(onClick = { onClickEdit() }) {
                     Icon(Icons.Default.Edit, contentDescription = "Edit")
                 }
 
-                IconButton(onClick = { }) {
+                IconButton(onClick = {onClickDelete()}) {
                     Icon(Icons.Default.Delete, contentDescription = "Delete")
                 }
             }
