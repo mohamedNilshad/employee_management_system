@@ -22,17 +22,19 @@ sealed class EmployeeResult {
 
 class EmployeeViewModel(private val repository: EmployeeRepository) : ViewModel() {
     private val _employeeResult = MutableStateFlow<EmployeeResult>(EmployeeResult.Empty)
+    private val _deleteEmployeeResult = MutableStateFlow<EmployeeResult>(EmployeeResult.Empty)
     private val _getEmployeeResult = MutableStateFlow<EmployeeResult>(EmployeeResult.Empty)
 
     val employeeResult: StateFlow<EmployeeResult> = _employeeResult
+    val deleteEmployeeResult: StateFlow<EmployeeResult> = _deleteEmployeeResult
     val getEmployeeResult: StateFlow<EmployeeResult> = _getEmployeeResult
 
     fun resetEmployeeResult() {
         _employeeResult.value = EmployeeResult.Empty
     }
 
-    fun resetGetEmployeeResult() {
-        _getEmployeeResult.value = EmployeeResult.Empty
+    fun resetDeleteEmployeeResult() {
+        _deleteEmployeeResult.value = EmployeeResult.Empty
     }
 
     fun fetchEmployees() {
@@ -48,23 +50,6 @@ class EmployeeViewModel(private val repository: EmployeeRepository) : ViewModel(
                 }
             } catch (e: Exception) {
                 _employeeResult.value = EmployeeResult.Error(e.message ?: "Unknown error")
-            }
-        }
-    }
-
-    fun fetchEmployeeById(employeeId: Int) {
-
-        viewModelScope.launch {
-            _getEmployeeResult.value = EmployeeResult.Loading
-            try {
-                val employee = repository.getEmployee(employeeId)
-                if (employee != null) {
-                    _getEmployeeResult.value = EmployeeResult.Success(status = true, message = "success", data = employee)
-                } else {
-                    _getEmployeeResult.value = EmployeeResult.Error("Empty")
-                }
-            } catch (e: Exception) {
-                _getEmployeeResult.value = EmployeeResult.Error(e.message ?: "Unknown error")
             }
         }
     }
@@ -96,6 +81,23 @@ class EmployeeViewModel(private val repository: EmployeeRepository) : ViewModel(
                 _employeeResult.value = EmployeeResult.Success(status = true, message = "Employee Updated Success!!", data = updatedEmployee)
             } catch (e: Exception) {
                 _employeeResult.value = EmployeeResult.Error(e.message ?: "Unknown error")
+            }
+        }
+    }
+
+    fun deleteEmployeeById(employeeId: Int) {
+
+        viewModelScope.launch {
+            _deleteEmployeeResult.value = EmployeeResult.Loading
+            try {
+                val isDelete = repository.deleteEmployee(employeeId)
+                if (isDelete == true) {
+                    _deleteEmployeeResult.value = EmployeeResult.Success(status = true, message = "Deleted Success", data = "")
+                } else {
+                    _deleteEmployeeResult.value = EmployeeResult.Error("Empty")
+                }
+            } catch (e: Exception) {
+                _deleteEmployeeResult.value = EmployeeResult.Error(e.message ?: "Unknown error")
             }
         }
     }

@@ -6,6 +6,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -23,6 +24,7 @@ import com.example.employeemanagementsystem.ui.screens.components.*
 import com.example.employeemanagementsystem.viewmodel.*
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import kotlinx.coroutines.launch
 
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
@@ -38,20 +40,36 @@ fun HomeScreen(
     var selectedIndex by remember { mutableIntStateOf(-1) }
 
     val context = LocalContext.current
+
     val logoutResult by authViewModel.logoutResult.collectAsState()
     val employeeResult by employeeViewModel.employeeResult.collectAsState()
+    val deleteEmployeeResult by employeeViewModel.deleteEmployeeResult.collectAsState()
+
     var isLogOuting = false
+    var isDeleting = false
+    var deleteId: Int = -1
+    var employeeList: List<Employee> = emptyList()
 
     val isRefreshing = employeeResult is EmployeeResult.Loading
 
     val prefHelper = remember { LocalDb(context) }
 
-    LaunchedEffect(Unit) {
-        employeeViewModel.fetchEmployees()
-    }
+    LaunchedEffect(Unit) { employeeViewModel.fetchEmployees() }
 
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     Scaffold(
+        snackbarHost = {
+            SnackbarHost(snackbarHostState) { data ->
+                Snackbar(
+                    snackbarData = data,
+                    containerColor = Color(0xFF323232),
+                    contentColor = Color.White,
+                    shape = RoundedCornerShape(8.dp),
+                )
+            }
+        },
         topBar = {
             CenterAlignedTopAppBar(
                 colors = TopAppBarColors(
@@ -80,7 +98,7 @@ fun HomeScreen(
                 .padding(8.dp)
                 .fillMaxSize()) {
 
-                if(isLogOuting){
+                if(isLogOuting || isDeleting){
                     LinearProgressIndicator(
                         modifier = Modifier.fillMaxWidth(),
                         color = MaterialTheme.colorScheme.secondary,
@@ -114,6 +132,34 @@ fun HomeScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
+                when (deleteEmployeeResult) {
+                    is EmployeeResult.Loading -> {isDeleting = true}
+
+                    is EmployeeResult.Success -> {
+                        val message = (deleteEmployeeResult as EmployeeResult.Success).message
+                        LaunchedEffect(message) {
+                            employeeList = employeeList.filter { it.id != deleteId }
+                            scope.launch { snackbarHostState.showSnackbar(message) }
+                            employeeViewModel.resetDeleteEmployeeResult()
+                            employeeViewModel.fetchEmployees()
+                            isDeleting = false
+
+                        }
+                    }
+
+                    is EmployeeResult.Error -> {
+                        val message = (deleteEmployeeResult as EmployeeResult.Error).message
+
+                        LaunchedEffect(Unit) {
+                            scope.launch { snackbarHostState.showSnackbar(message) }
+                            employeeViewModel.resetDeleteEmployeeResult()
+                            isDeleting = false
+                        }
+                    }
+
+                    is EmployeeResult.Empty -> {isDeleting = false}
+                }
+
                 when (employeeResult) {
                     is EmployeeResult.Loading -> {
                         Column(
@@ -130,7 +176,8 @@ fun HomeScreen(
                     }
 
                     is EmployeeResult.Success -> {
-                        val employeeList = (employeeResult as EmployeeResult.Success).data as List<Employee>
+                        employeeList = (employeeResult as EmployeeResult.Success).data as List<Employee>
+
                         if (employeeList.isEmpty()) {
                             Box(
                                 modifier = Modifier.fillMaxSize(),
@@ -147,12 +194,19 @@ fun HomeScreen(
                                             navController.navigate("add_edit?employeeId=${employee.id}")
                                         },
                                         onClickDelete = {
-//                                            navController.navigate("add_edit")
+                                            isDeleting = true
+                                            deleteId = employee.id!!
+                                            employeeViewModel.deleteEmployeeById(deleteId)
                                         }
                                     )
                                 }
                             }
                         }
+
+
+
+
+
                     }
 
                     is EmployeeResult.Error -> {

@@ -9,6 +9,8 @@ interface EmployeeRepository {
     suspend fun getEmployee(employeeId: Int): Employee?
     suspend fun addEmployee(employee: Employee): Employee?
     suspend fun updateEmployee(employee: Employee): Employee
+    suspend fun deleteEmployee(employeeId: Int): Boolean?
+
 }
 
 class EmployeeRepositoryImpl(private val apiService: ApiService) : EmployeeRepository {
@@ -30,6 +32,11 @@ class EmployeeRepositoryImpl(private val apiService: ApiService) : EmployeeRepos
     override suspend fun updateEmployee(employee: Employee): Employee {
         val employeeResult = apiService.updateEmployee(employee.id.toString(), employee)
         return employeeResult
+    }
+
+    override suspend fun deleteEmployee(employeeId: Int): Boolean {
+        val employeeResult = apiService.deleteEmployee(employeeId.toString())
+        return employeeResult != null
     }
 
 }

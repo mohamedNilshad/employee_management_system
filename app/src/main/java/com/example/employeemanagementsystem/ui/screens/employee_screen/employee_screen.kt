@@ -54,7 +54,7 @@ fun EmployeeScreen(
 
     if(employeeId != -1) {
         LaunchedEffect(Unit) {
-            employeeViewModel.fetchEmployeeById(employeeId!!)
+            employeeViewModel.deleteEmployeeById(employeeId!!)
         }
     }
 
