@@ -49,16 +49,22 @@ fun HomeScreen(
     var isLogOuting = false
     var isDeleting = false
 
-    var employeeList: List<Employee> = emptyList()
+    val employeeList = remember { mutableStateListOf<Employee>() }
+    val searchEmployeeList = remember { mutableStateListOf<Employee>() }
 
     val isRefreshing = employeeResult is EmployeeResult.Loading
 
     val prefHelper = remember { LocalDb(context) }
 
-    LaunchedEffect(Unit) { employeeViewModel.fetchEmployees() }
+
+    LaunchedEffect(Unit) {
+        employeeViewModel.fetchEmployees()
+    }
 
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+
+
 
     Scaffold(
         snackbarHost = {
@@ -109,17 +115,24 @@ fun HomeScreen(
                 CustomTextField(
                     "Search",
                     searchState,
-                    onChange = { searchState = it }
+                    onChange = {
+                        searchState = it
+                        searchEmployeeList.clear()
+
+                        if (searchState.isNotEmpty()) {
+                            searchEmployeeList.addAll(searchFromList(employeeList, searchState))
+                        } else {
+                            searchEmployeeList.addAll(employeeList)
+                        }
+
+
+                    }
                 )
 
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                Row(
-                    modifier = Modifier
-                        .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
+                Row(modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp, vertical = 4.dp)) {
                     chipOptions.forEachIndexed { index, dep ->
                         CustomFilterChip(
                             onClick = { selectedIndex = index },
@@ -131,6 +144,8 @@ fun HomeScreen(
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
+
+
 
                 when (employeeResult) {
                     is EmployeeResult.Loading -> {
@@ -148,7 +163,14 @@ fun HomeScreen(
                     }
 
                     is EmployeeResult.Success -> {
-                        employeeList = ((employeeResult as EmployeeResult.Success).data as List<Employee>)
+                        employeeList.clear()
+                        employeeList.addAll((employeeResult as EmployeeResult.Success).data as List<Employee>)
+                        searchEmployeeList.clear()
+                        searchEmployeeList.addAll(employeeList)
+                        println(employeeList)
+                        LaunchedEffect(Unit) {
+                            employeeViewModel.resetEmployeeResult()
+                        }
                     }
 
                     is EmployeeResult.Error -> {
@@ -167,16 +189,16 @@ fun HomeScreen(
                     }
 
                     is EmployeeResult.Empty -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(text = "No employees found.")
-                        }
+//                        Box(
+//                            modifier = Modifier.fillMaxSize(),
+//                            contentAlignment = Alignment.Center
+//                        ) {
+//                            Text(text = "No employees found.")
+//                        }
                     }
                 }
 
-                if (employeeList.isEmpty()) {
+                if (searchEmployeeList.isEmpty()) {
                     Column(
                         modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.Center,
@@ -186,7 +208,7 @@ fun HomeScreen(
                     }
                 } else {
                     LazyColumn {
-                        items(employeeList.reversed()) { employee ->
+                        items(searchEmployeeList.reversed()) { employee ->
                             CustomCard(
                                 employee,
                                 onClickEdit = {
@@ -270,7 +292,12 @@ fun HomeScreen(
         }
     }
 }
-
+fun searchFromList(list: List<Employee>, query: String): List<Employee> {
+    return list.filter {
+        it.name.contains(query, ignoreCase = true) ||
+                it.department.contains(query, ignoreCase = true)
+    }
+}
 
 @Composable
 fun CustomMenu(viewModel: AuthViewModel, context: Context, username: String?) {
@@ -285,7 +312,7 @@ fun CustomMenu(viewModel: AuthViewModel, context: Context, username: String?) {
         }
         DropdownMenu(
             expanded = expanded,
-            onDismissRequest = { expanded = false }
+            onDismissRequest = { expanded = false },
         ) {
 
             DropdownMenuItem(
@@ -296,7 +323,7 @@ fun CustomMenu(viewModel: AuthViewModel, context: Context, username: String?) {
             DropdownMenuItem(
                 text = { Text("Dark Mode") },
                 leadingIcon = {Icon(Icons.Filled.Info, contentDescription = "Theme")},
-                onClick = { /* Do something... */ }
+                onClick = {}
             )
             DropdownMenuItem(
                 text = { Text("Logout") },

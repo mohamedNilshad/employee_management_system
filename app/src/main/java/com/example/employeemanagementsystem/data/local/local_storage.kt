@@ -23,12 +23,8 @@ class LocalDb(context: Context){
     }
 
     fun logout(){
-        println(getUsername())
-        println(getUserId())
         sharedPref.edit().remove(KEY_USERNAME).apply()
         sharedPref.edit().remove(KEY_USERID).apply()
-        println(getUserId())
-        println(getUsername())
     }
 
     // Get username

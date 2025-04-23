@@ -51,3 +51,45 @@ fun CustomCard(
     }
 
 }
+
+@Composable
+fun TempCustomCard(
+    name: String,
+    onClickEdit: () -> Unit,
+    onClickDelete: () -> Unit
+){
+    Card(modifier = Modifier.fillMaxWidth().padding(4.dp)) {
+
+        Row(
+            Modifier.fillMaxWidth().padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column (verticalArrangement = Arrangement.Center){
+                Text(
+                    "Name: ${name}",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    "Department: -",
+                    fontSize = 18.sp
+                )
+                Text(
+                    "Email: -",
+                    fontSize = 18.sp
+                )
+            }
+            Row {
+                IconButton(onClick = { onClickEdit() }) {
+                    Icon(Icons.Default.Edit, contentDescription = "Edit")
+                }
+
+                IconButton(onClick = {onClickDelete()}) {
+                    Icon(Icons.Default.Delete, contentDescription = "Delete")
+                }
+            }
+        }
+    }
+
+}
