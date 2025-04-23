@@ -18,6 +18,7 @@ val dummyEmployeeList = listOf(
 )
 
 val dummyDepartmentList: List<Department> = listOf(
+    Department(-1, "All"),
     Department(1, "Development"),
     Department(2, "Customer Support"),
     Department(3, "QA")

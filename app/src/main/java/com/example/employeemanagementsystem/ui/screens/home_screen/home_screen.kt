@@ -124,18 +124,25 @@ fun HomeScreen(
                         } else {
                             searchEmployeeList.addAll(employeeList)
                         }
-
-
                     }
                 )
-
 
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Row(modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp, vertical = 4.dp)) {
                     chipOptions.forEachIndexed { index, dep ->
                         CustomFilterChip(
-                            onClick = { selectedIndex = index },
+                            onClick = {
+                                selectedIndex = index
+
+                                searchEmployeeList.clear()
+
+                                if (index != 0) {
+                                    searchEmployeeList.addAll(searchFromList(employeeList, dep.department))
+                                } else {
+                                    searchEmployeeList.addAll(employeeList)
+                                }
+                            },
                             index = index,
                             selectedIndex = selectedIndex,
                             label = dep.department,
@@ -294,9 +301,9 @@ fun HomeScreen(
 }
 fun searchFromList(list: List<Employee>, query: String): List<Employee> {
     return list.filter {
-        it.name.contains(query, ignoreCase = true) ||
-                it.department.contains(query, ignoreCase = true)
-    }
+            it.name.contains(query, ignoreCase = true) ||
+                    it.department.contains(query, ignoreCase = true)
+        }
 }
 
 @Composable
